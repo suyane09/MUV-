@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Controle de Vendas</title>
+<style>
+  :root{
+    --bg: #EFEAE1;
+    --surface: #FBF8F2;
+    --ink: #262220;
+    --ink-soft: #6b6459;
+    --line: #d9d2c4;
+    --thread: #A63A32;
+    --thread-dark: #7e2c26;
+    --denim: #435D75;
+    --sage: #4C7A5E;
+    --sage-bg: #E4ECE6;
+    --tag-hole: #EFEAE1;
+    --radius: 4px;
+    font-family: 'Inter', system-ui, sans-serif;
+  }
+  @import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@500;600&display=swap');
+
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background: var(--bg);
+    color: var(--ink);
+    padding: 28px 16px 60px;
+  }
+  .wrap{ max-width: 980px; margin: 0 auto; }
+
+  header{
+    display:flex; align-items:flex-end; justify-content:space-between;
+    margin-bottom: 26px; flex-wrap: wrap; gap: 10px;
+    border-bottom: 2px solid var(--ink);
+    padding-bottom: 14px;
+  }
+  h1{
+    font-family: 'Barlow Condensed', sans-serif;
+    font-weight: 700;
+    font-size: 42px;
+    letter-spacing: 0.5px;
+    margin: 0;
+    line-height: 0.9;
+  }
+  h1 span{ color: var(--thread); }
+  .sub{ font-size: 13px; color: var(--ink-soft); margin-top: 4px; }
+  .reset-btn{
+    background:none; border:1px solid var(--line); color:var(--ink-soft);
+    font-size:12px; padding:6px 10px; border-radius: var(--radius); cursor:pointer;
+  }
+  .reset-btn:hover{ border-color:var(--thread); color:var(--thread); }
+
+  /* SUMMARY CARDS */
+  .summary{
+    display:grid; grid-template-columns: repeat(4, 1fr); gap: 12px;
+    margin-bottom: 28px;
+  }
+  @media (max-width: 720px){ .summary{ grid-template-columns: repeat(2,1fr);} }
+  .card{
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 14px 16px;
+    position:relative;
+  }
+  .card .label{
+    font-size: 11px; text-transform:uppercase; letter-spacing: 0.08em;
+    color: var(--ink-soft); font-weight:600; margin-bottom:6px;
+  }
+  .card .value{
+    font-family:'IBM Plex Mono', monospace; font-weight:600; font-size: 22px;
+  }
+  .card.lucro .value{ color: var(--sage); }
+  .card.lucro{ background: var(--sage-bg); border-color: #cfe0d5; }
+
+  /* FORM AS PRICE TAG */
+  .tag-panel{
+    display:flex; gap: 22px; margin-bottom: 32px; align-items:flex-start; flex-wrap:wrap;
+  }
+  .tag-card{
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    position: relative;
+    padding: 22px 22px 22px 40px;
+    flex: 1 1 520px;
+    min-width: 300px;
+  }
+  .tag-card::before{
+    content:"";
+    position:absolute; left: 16px; top: 22px; bottom: 22px;
+    border-left: 2px dashed var(--line);
+  }
+  .punch{
+    position:absolute; left: -1px; top: 50%; transform: translate(-50%,-50%);
+    width: 20px; height:20px; border-radius:50%;
+    background: var(--bg);
+    border: 2px solid var(--line);
+  }
+  .tag-title{
+    font-family:'Barlow Condensed', sans-serif; font-weight:700; font-size:20px;
+    margin: 0 0 14px 0; display:flex; align-items:center; gap:8px;
+  }
+  .tag-title::before{ content:"🏷"; font-size:18px; }
+
+  .form-grid{
+    display:grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 10px 12px;
+  }
+  @media (max-width: 640px){ .form-grid{ grid-template-columns: 1fr 1fr; } }
+  .field{ display:flex; flex-direction:column; gap:4px; }
+  .field label{ font-size:11px; color:var(--ink-soft); font-weight:600; text-transform:uppercase; letter-spacing:0.04em; }
+  .field input{
+    border:1px solid var(--line); border-radius: var(--radius); padding:10px;
+    font-family:'Inter',sans-serif; font-size:16px; background:#fff; color:var(--ink);
+    min-height: 42px;
+  }
+  .field input:focus{ outline:none; border-color: var(--thread); }
+  .field.wide{ grid-column: span 2; }
+  @media (max-width: 640px){ .field.wide{ grid-column: span 2; } }
+
+  .lucro-preview{
+    grid-column: 1 / -1;
+    display:flex; justify-content:space-between; align-items:center;
+    padding-top: 10px; margin-top: 4px; border-top: 1px dashed var(--line);
+  }
+  .lucro-preview .txt{ font-size:12px; color:var(--ink-soft); }
+  .lucro-preview .num{ font-family:'IBM Plex Mono', monospace; font-weight:600; font-size:16px; color: var(--sage); }
+
+  .add-btn{
+    grid-column: 1 / -1;
+    background: var(--thread); color:#fff; border:none; border-radius: var(--radius);
+    padding: 13px 16px; font-size:15px; font-weight:600; cursor:pointer;
+    font-family:'Inter',sans-serif; margin-top: 4px; min-height: 46px;
+  }
+  .add-btn:hover{ background: var(--thread-dark); }
+
+  /* HISTORY */
+  .history-head{
+    display:flex; justify-content:space-between; align-items:baseline; margin-bottom:10px;
+  }
+  .history-head h2{
+    font-family:'Barlow Condensed', sans-serif; font-size: 24px; margin:0; font-weight:700;
+  }
+  .filter{
+    font-size:12px; border:1px solid var(--line); border-radius: var(--radius);
+    padding:5px 8px; background:#fff; color: var(--ink);
+  }
+
+  table{ width:100%; border-collapse: collapse; background: var(--surface); border-radius: var(--radius); overflow:hidden;}
+  thead th{
+    text-align:left; font-size:11px; text-transform:uppercase; letter-spacing:0.05em;
+    color: var(--ink-soft); border-bottom: 2px solid var(--ink); padding: 8px 10px;
+  }
+  tbody td{
+    padding: 10px; font-size:14px; border-bottom: 1px solid var(--line);
+  }
+  tbody tr:hover{ background: #f3efe6; }
+  .num-cell{ font-family:'IBM Plex Mono', monospace; }
+  .lucro-cell{ color: var(--sage); font-weight:600; }
+  .del-btn{
+    background:none; border:none; color: var(--ink-soft); cursor:pointer; font-size:20px;
+    padding: 6px 10px; line-height:1;
+  }
+  .del-btn:hover{ color: var(--thread); }
+
+  /* MOBILE: history becomes stacked cards instead of a cramped table */
+  @media (max-width: 640px){
+    thead{ display:none; }
+    table, tbody, tr, td{ display:block; width:100%; }
+    tbody tr{
+      background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+      margin-bottom: 10px; padding: 12px 14px; position: relative;
+    }
+    tbody td{ border-bottom:none; padding: 3px 0; display:flex; justify-content:space-between; align-items:center; }
+    tbody td::before{
+      content: attr(data-label); font-size:11px; color: var(--ink-soft);
+      text-transform:uppercase; letter-spacing:0.04em; font-weight:600;
+    }
+    tbody td.item-cell{ display:block; padding-bottom:8px; margin-bottom:6px; border-bottom:1px dashed var(--line); }
+    tbody td.item-cell::before{ content:none; }
+    tbody td.item-cell{ font-weight:600; font-size:15px; }
+    tbody td.del-cell{ position:absolute; top:8px; right:8px; padding:0; }
+    tbody td.del-cell::before{ content:none; }
+  }
+  .empty{
+    text-align:center; padding: 40px 20px; color: var(--ink-soft); font-size:14px;
+    background: var(--surface); border-radius: var(--radius); border: 1px dashed var(--line);
+  }
+  .cat-pill{
+    font-size:11px; background: #eee3d3; color:#7a6a4f; padding:2px 7px; border-radius: 10px;
+  }
+  .loading{ text-align:center; padding:30px; color:var(--ink-soft); font-size:13px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div>
+      <h1>Controle de <span>Vendas</span></h1>
+      <div class="sub">Registre o que saiu do estoque e acompanhe o lucro em tempo real</div>
+    </div>
+    <button class="reset-btn" id="resetBtn">Limpar tudo</button>
+  </header>
+
+  <div id="loadingMsg" class="loading">Carregando seus dados...</div>
+
+  <div id="app" style="display:none;">
+
+    <div class="summary">
+      <div class="card">
+        <div class="label">Peças vendidas</div>
+        <div class="value" id="sumQtd">0</div>
+      </div>
+      <div class="card">
+        <div class="label">Faturamento</div>
+        <div class="value" id="sumFat">R$ 0,00</div>
+      </div>
+      <div class="card lucro">
+        <div class="label">Lucro total</div>
+        <div class="value" id="sumLucro">R$ 0,00</div>
+      </div>
+      <div class="card">
+        <div class="label">Ticket médio</div>
+        <div class="value" id="sumTicket">R$ 0,00</div>
+      </div>
+    </div>
+
+    <div class="tag-panel">
+      <div class="tag-card">
+        <div class="punch"></div>
+        <div class="tag-title">Registrar venda</div>
+        <div class="form-grid">
+          <div class="field wide">
+            <label>Peça</label>
+            <input type="text" id="fItem" placeholder="Ex: Vestido floral">
+          </div>
+          <div class="field">
+            <label>Categoria</label>
+            <input type="text" id="fCat" placeholder="Ex: Vestidos">
+          </div>
+          <div class="field">
+            <label>Data</label>
+            <input type="date" id="fData">
+          </div>
+          <div class="field">
+            <label>Qtd</label>
+            <input type="number" id="fQtd" min="1" value="1">
+          </div>
+          <div class="field">
+            <label>Custo (un.)</label>
+            <input type="number" id="fCusto" min="0" step="0.01" placeholder="0,00">
+          </div>
+          <div class="field">
+            <label>Venda (un.)</label>
+            <input type="number" id="fPreco" min="0" step="0.01" placeholder="0,00">
+          </div>
+          <div style="flex:1"></div>
+
+          <div class="lucro-preview">
+            <span class="txt">Lucro dessa venda</span>
+            <span class="num" id="previewLucro">R$ 0,00</span>
+          </div>
+          <button class="add-btn" id="addBtn">Adicionar venda</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="history-head">
+      <h2>Histórico</h2>
+      <select class="filter" id="sortSelect">
+        <option value="recent">Mais recentes</option>
+        <option value="old">Mais antigas</option>
+        <option value="lucro">Maior lucro</option>
+      </select>
+    </div>
+
+    <div id="tableWrap"></div>
+
+  </div>
+</div>
+
+<script>
+const STORAGE_KEY = 'vendas-roupas-lista';
+let sales = [];
+
+function fmtMoney(n){
+  return 'R$ ' + n.toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2});
+}
+function fmtDate(iso){
+  if(!iso) return '-';
+  const [y,m,d] = iso.split('-');
+  return `${d}/${m}/${y}`;
+}
+function todayISO(){
+  return new Date().toISOString().split('T')[0];
+}
+
+async function loadSales(){
+  try{
+    const res = await window.storage.get(STORAGE_KEY, false);
+    sales = res ? JSON.parse(res.value) : [];
+  }catch(e){
+    sales = [];
+  }
+  document.getElementById('loadingMsg').style.display = 'none';
+  document.getElementById('app').style.display = 'block';
+  render();
+}
+
+async function saveSales(){
+  try{
+    await window.storage.set(STORAGE_KEY, JSON.stringify(sales), false);
+  }catch(e){
+    console.error('Erro ao salvar', e);
+  }
+}
+
+function computeLucro(sale){
+  return (sale.preco - sale.custo) * sale.qtd;
+}
+
+function updatePreview(){
+  const qtd = parseFloat(document.getElementById('fQtd').value) || 0;
+  const custo = parseFloat(document.getElementById('fCusto').value) || 0;
+  const preco = parseFloat(document.getElementById('fPreco').value) || 0;
+  const lucro = (preco - custo) * qtd;
+  document.getElementById('previewLucro').textContent = fmtMoney(lucro);
+  document.getElementById('previewLucro').style.color = lucro < 0 ? '#A63A32' : '';
+}
+
+['fQtd','fCusto','fPreco'].forEach(id=>{
+  document.getElementById(id).addEventListener('input', updatePreview);
+});
+
+document.getElementById('addBtn').addEventListener('click', async ()=>{
+  const item = document.getElementById('fItem').value.trim();
+  const cat = document.getElementById('fCat').value.trim();
+  const data = document.getElementById('fData').value || todayISO();
+  const qtd = parseFloat(document.getElementById('fQtd').value);
+  const custo = parseFloat(document.getElementById('fCusto').value);
+  const preco = parseFloat(document.getElementById('fPreco').value);
+
+  if(!item){ alert('Digite o nome da peça.'); return; }
+  if(!qtd || qtd <= 0){ alert('Informe uma quantidade válida.'); return; }
+  if(isNaN(custo) || isNaN(preco)){ alert('Informe os valores de custo e venda.'); return; }
+
+  sales.push({
+    id: 'v' + Date.now(),
+    item, cat, data, qtd, custo, preco
+  });
+  await saveSales();
+
+  document.getElementById('fItem').value = '';
+  document.getElementById('fCat').value = '';
+  document.getElementById('fData').value = '';
+  document.getElementById('fQtd').value = 1;
+  document.getElementById('fCusto').value = '';
+  document.getElementById('fPreco').value = '';
+  updatePreview();
+
+  render();
+});
+
+document.getElementById('sortSelect').addEventListener('change', render);
+
+document.getElementById('resetBtn').addEventListener('click', async ()=>{
+  if(confirm('Isso vai apagar todas as vendas registradas. Tem certeza?')){
+    sales = [];
+    await saveSales();
+    render();
+  }
+});
+
+async function deleteSale(id){
+  sales = sales.filter(s => s.id !== id);
+  await saveSales();
+  render();
+}
+
+function render(){
+  const totalQtd = sales.reduce((a,s)=>a+s.qtd,0);
+  const totalFat = sales.reduce((a,s)=>a+s.preco*s.qtd,0);
+  const totalLucro = sales.reduce((a,s)=>a+computeLucro(s),0);
+  const ticket = totalQtd > 0 ? totalFat/totalQtd : 0;
+
+  document.getElementById('sumQtd').textContent = totalQtd;
+  document.getElementById('sumFat').textContent = fmtMoney(totalFat);
+  document.getElementById('sumLucro').textContent = fmtMoney(totalLucro);
+  document.getElementById('sumTicket').textContent = fmtMoney(ticket);
+
+  const sortVal = document.getElementById('sortSelect').value;
+  let sorted = [...sales];
+  if(sortVal === 'recent') sorted.sort((a,b)=> (b.data||'').localeCompare(a.data||'') || b.id.localeCompare(a.id));
+  if(sortVal === 'old') sorted.sort((a,b)=> (a.data||'').localeCompare(b.data||'') || a.id.localeCompare(b.id));
+  if(sortVal === 'lucro') sorted.sort((a,b)=> computeLucro(b) - computeLucro(a));
+
+  const wrap = document.getElementById('tableWrap');
+  if(sorted.length === 0){
+    wrap.innerHTML = '<div class="empty">Nenhuma venda registrada ainda. Preencha a etiqueta acima para começar.</div>';
+    return;
+  }
+
+  let rows = sorted.map(s => `
+    <tr>
+      <td class="item-cell">${s.item}${s.cat ? ` <span class="cat-pill">${s.cat}</span>` : ''}</td>
+      <td class="num-cell" data-label="Data">${fmtDate(s.data)}</td>
+      <td class="num-cell" data-label="Qtd">${s.qtd}</td>
+      <td class="num-cell" data-label="Custo un.">${fmtMoney(s.custo)}</td>
+      <td class="num-cell" data-label="Venda un.">${fmtMoney(s.preco)}</td>
+      <td class="num-cell lucro-cell" data-label="Lucro">${fmtMoney(computeLucro(s))}</td>
+      <td class="del-cell"><button class="del-btn" onclick="deleteSale('${s.id}')" title="Excluir">✕</button></td>
+    </tr>
+  `).join('');
+
+  wrap.innerHTML = `
+    <table>
+      <thead>
+        <tr>
+          <th>Peça</th>
+          <th>Data</th>
+          <th>Qtd</th>
+          <th>Custo un.</th>
+          <th>Venda un.</th>
+          <th>Lucro</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>${rows}</tbody>
+    </table>
+  `;
+}
+
+document.getElementById('fData').value = todayISO();
+loadSales();
+</script>
+</body>
+</html>
