@@ -3,6 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <title>Controle de Vendas</title>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore-compat.js"></script>
 <style>
   :root{
     --bg: #EFEAE1;
@@ -15,183 +17,143 @@
     --denim: #435D75;
     --sage: #4C7A5E;
     --sage-bg: #E4ECE6;
-    --tag-hole: #EFEAE1;
     --radius: 4px;
     font-family: 'Inter', system-ui, sans-serif;
   }
   @import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@500;600&display=swap');
 
   *{box-sizing:border-box;}
-  body{
-    margin:0;
-    background: var(--bg);
-    color: var(--ink);
-    padding: 28px 16px 60px;
-  }
+  body{ margin:0; background: var(--bg); color: var(--ink); padding: 24px 14px 60px; }
   .wrap{ max-width: 980px; margin: 0 auto; }
 
   header{
     display:flex; align-items:flex-end; justify-content:space-between;
-    margin-bottom: 26px; flex-wrap: wrap; gap: 10px;
-    border-bottom: 2px solid var(--ink);
-    padding-bottom: 14px;
+    margin-bottom: 20px; flex-wrap: wrap; gap: 10px;
+    border-bottom: 2px solid var(--ink); padding-bottom: 14px;
   }
-  h1{
-    font-family: 'Barlow Condensed', sans-serif;
-    font-weight: 700;
-    font-size: 42px;
-    letter-spacing: 0.5px;
-    margin: 0;
-    line-height: 0.9;
-  }
+  h1{ font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: 38px; letter-spacing: 0.5px; margin: 0; line-height: 0.9; }
   h1 span{ color: var(--thread); }
-  .sub{ font-size: 13px; color: var(--ink-soft); margin-top: 4px; }
-  .reset-btn{
-    background:none; border:1px solid var(--line); color:var(--ink-soft);
-    font-size:12px; padding:6px 10px; border-radius: var(--radius); cursor:pointer;
-  }
+  .sub{ font-size: 13px; color: var(--ink-soft); margin-top: 4px; display:flex; align-items:center; gap:6px;}
+  .sync-dot{ width:8px; height:8px; border-radius:50%; background: var(--sage); display:inline-block; }
+  .reset-btn{ background:none; border:1px solid var(--line); color:var(--ink-soft); font-size:12px; padding:6px 10px; border-radius: var(--radius); cursor:pointer; }
   .reset-btn:hover{ border-color:var(--thread); color:var(--thread); }
 
-  /* SUMMARY CARDS */
-  .summary{
-    display:grid; grid-template-columns: repeat(4, 1fr); gap: 12px;
-    margin-bottom: 28px;
-  }
-  @media (max-width: 720px){ .summary{ grid-template-columns: repeat(2,1fr);} }
-  .card{
-    background: var(--surface);
-    border: 1px solid var(--line);
-    border-radius: var(--radius);
-    padding: 14px 16px;
-    position:relative;
-  }
-  .card .label{
-    font-size: 11px; text-transform:uppercase; letter-spacing: 0.08em;
-    color: var(--ink-soft); font-weight:600; margin-bottom:6px;
-  }
-  .card .value{
-    font-family:'IBM Plex Mono', monospace; font-weight:600; font-size: 22px;
-  }
+  .summary{ display:grid; grid-template-columns: repeat(5, 1fr); gap: 10px; margin-bottom: 20px; }
+  @media (max-width: 900px){ .summary{ grid-template-columns: repeat(3,1fr);} }
+  @media (max-width: 560px){ .summary{ grid-template-columns: repeat(2,1fr);} }
+  .card{ background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 12px 14px; }
+  .card .label{ font-size: 10.5px; text-transform:uppercase; letter-spacing: 0.08em; color: var(--ink-soft); font-weight:600; margin-bottom:5px; }
+  .card .value{ font-family:'IBM Plex Mono', monospace; font-weight:600; font-size: 19px; }
   .card.lucro .value{ color: var(--sage); }
   .card.lucro{ background: var(--sage-bg); border-color: #cfe0d5; }
+  .card.fiado .value{ color: var(--thread); }
+  .card.fiado{ background: #F5E7E2; border-color: #e6cec4; }
 
-  /* FORM AS PRICE TAG */
-  .tag-panel{
-    display:flex; gap: 22px; margin-bottom: 32px; align-items:flex-start; flex-wrap:wrap;
+  .tabs{ display:flex; gap:4px; border-bottom: 1px solid var(--line); margin-bottom: 22px; }
+  .tab-btn{
+    background:none; border:none; padding:10px 14px; cursor:pointer;
+    font-family:'Barlow Condensed', sans-serif; font-weight:700; font-size:17px;
+    color: var(--ink-soft); border-bottom: 3px solid transparent; margin-bottom:-1px;
   }
+  .tab-btn.active{ color: var(--ink); border-bottom-color: var(--thread); }
+  .tab-panel{ display:none; }
+  .tab-panel.active{ display:block; }
+
+  .tag-panel{ display:flex; gap: 22px; margin-bottom: 26px; align-items:flex-start; flex-wrap:wrap; }
   .tag-card{
-    background: var(--surface);
-    border: 1px solid var(--line);
-    border-radius: var(--radius);
-    position: relative;
-    padding: 22px 22px 22px 40px;
-    flex: 1 1 520px;
-    min-width: 300px;
+    background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+    position: relative; padding: 22px 22px 22px 40px; flex: 1 1 520px; min-width: 280px;
   }
-  .tag-card::before{
-    content:"";
-    position:absolute; left: 16px; top: 22px; bottom: 22px;
-    border-left: 2px dashed var(--line);
-  }
-  .punch{
-    position:absolute; left: -1px; top: 50%; transform: translate(-50%,-50%);
-    width: 20px; height:20px; border-radius:50%;
-    background: var(--bg);
-    border: 2px solid var(--line);
-  }
-  .tag-title{
-    font-family:'Barlow Condensed', sans-serif; font-weight:700; font-size:20px;
-    margin: 0 0 14px 0; display:flex; align-items:center; gap:8px;
-  }
+  .tag-card::before{ content:""; position:absolute; left: 16px; top: 22px; bottom: 22px; border-left: 2px dashed var(--line); }
+  .punch{ position:absolute; left: -1px; top: 50%; transform: translate(-50%,-50%); width: 20px; height:20px; border-radius:50%; background: var(--bg); border: 2px solid var(--line); }
+  .tag-title{ font-family:'Barlow Condensed', sans-serif; font-weight:700; font-size:20px; margin: 0 0 14px 0; display:flex; align-items:center; gap:8px; }
   .tag-title::before{ content:"🏷"; font-size:18px; }
 
-  .form-grid{
-    display:grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 10px 12px;
-  }
+  .form-grid{ display:grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 10px 12px; }
   @media (max-width: 640px){ .form-grid{ grid-template-columns: 1fr 1fr; } }
   .field{ display:flex; flex-direction:column; gap:4px; }
   .field label{ font-size:11px; color:var(--ink-soft); font-weight:600; text-transform:uppercase; letter-spacing:0.04em; }
-  .field input{
-    border:1px solid var(--line); border-radius: var(--radius); padding:10px;
-    font-family:'Inter',sans-serif; font-size:16px; background:#fff; color:var(--ink);
-    min-height: 42px;
-  }
+  .field input{ border:1px solid var(--line); border-radius: var(--radius); padding:10px; font-family:'Inter',sans-serif; font-size:16px; background:#fff; color:var(--ink); min-height:42px; }
   .field input:focus{ outline:none; border-color: var(--thread); }
   .field.wide{ grid-column: span 2; }
-  @media (max-width: 640px){ .field.wide{ grid-column: span 2; } }
 
-  .lucro-preview{
-    grid-column: 1 / -1;
-    display:flex; justify-content:space-between; align-items:center;
-    padding-top: 10px; margin-top: 4px; border-top: 1px dashed var(--line);
-  }
+  .checkbox-field{ display:flex; align-items:center; gap:8px; padding-top: 4px; }
+  .checkbox-field input[type="checkbox"]{ width:18px; height:18px; accent-color: var(--thread); cursor:pointer; }
+  .checkbox-field label{ font-size:13px; color: var(--ink); font-weight:500; text-transform:none; letter-spacing:0; cursor:pointer; }
+
+  .lucro-preview{ grid-column: 1 / -1; display:flex; justify-content:space-between; align-items:center; padding-top: 10px; margin-top: 4px; border-top: 1px dashed var(--line); }
   .lucro-preview .txt{ font-size:12px; color:var(--ink-soft); }
   .lucro-preview .num{ font-family:'IBM Plex Mono', monospace; font-weight:600; font-size:16px; color: var(--sage); }
 
   .add-btn{
-    grid-column: 1 / -1;
-    background: var(--thread); color:#fff; border:none; border-radius: var(--radius);
-    padding: 13px 16px; font-size:15px; font-weight:600; cursor:pointer;
-    font-family:'Inter',sans-serif; margin-top: 4px; min-height: 46px;
+    grid-column: 1 / -1; background: var(--thread); color:#fff; border:none; border-radius: var(--radius);
+    padding: 13px 16px; font-size:15px; font-weight:600; cursor:pointer; font-family:'Inter',sans-serif;
+    margin-top: 4px; min-height: 46px;
   }
   .add-btn:hover{ background: var(--thread-dark); }
+  .add-btn:disabled{ opacity:0.6; cursor:not-allowed; }
+  .add-btn.cancel{ background: none; color: var(--ink-soft); border:1px solid var(--line); }
 
-  /* HISTORY */
-  .history-head{
-    display:flex; justify-content:space-between; align-items:baseline; margin-bottom:10px;
+  h2.section-title{ font-family:'Barlow Condensed', sans-serif; font-size: 22px; margin:0 0 12px 0; font-weight:700; }
+
+  .stock-card{
+    display:flex; justify-content:space-between; align-items:center; gap:10px;
+    background: var(--surface); border:1px solid var(--line); border-radius: var(--radius);
+    padding: 12px 14px; margin-bottom: 8px;
   }
-  .history-head h2{
-    font-family:'Barlow Condensed', sans-serif; font-size: 24px; margin:0; font-weight:700;
+  .stock-name{ font-weight:600; font-size:15px; }
+  .stock-meta{ font-size:12.5px; color: var(--ink-soft); margin-top:2px; font-family:'IBM Plex Mono', monospace; }
+  .qty-badge{ font-family:'IBM Plex Mono', monospace; font-weight:600; font-size:14px; background: var(--sage-bg); color: var(--sage); padding:4px 10px; border-radius: 10px; }
+  .qty-badge.zero{ background:#F5E7E2; color: var(--thread-dark); }
+  .stock-actions{ display:flex; align-items:center; gap:10px; }
+  .cat-pill{ font-size:11px; background: #eee3d3; color:#7a6a4f; padding:2px 7px; border-radius: 10px; }
+
+  .sell-card{
+    background: var(--surface); border:1px solid var(--line); border-radius: var(--radius);
+    padding: 14px; margin-bottom: 10px; cursor:pointer;
   }
-  .filter{
-    font-size:12px; border:1px solid var(--line); border-radius: var(--radius);
-    padding:5px 8px; background:#fff; color: var(--ink);
-  }
+  .sell-card.selected{ border-color: var(--thread); box-shadow: 0 0 0 1px var(--thread); cursor:default; }
+  .sell-card.disabled{ opacity:0.5; cursor:not-allowed; }
+  .sell-top{ display:flex; justify-content:space-between; align-items:center; gap:10px; }
+  .sell-form{ margin-top: 14px; padding-top: 14px; border-top: 1px dashed var(--line); display:grid; grid-template-columns: 1fr 1fr; gap: 10px 12px; }
+  .sell-form .field.wide{ grid-column: 1 / -1; }
+  .sell-form-actions{ grid-column: 1 / -1; display:flex; gap:10px; }
+  .sell-form-actions .add-btn{ flex:1; margin-top:0; }
+
+  .history-head{ display:flex; justify-content:space-between; align-items:baseline; margin-bottom:10px; flex-wrap:wrap; gap:8px; }
+  .filter{ font-size:12px; border:1px solid var(--line); border-radius: var(--radius); padding:7px 8px; background:#fff; color: var(--ink); }
 
   table{ width:100%; border-collapse: collapse; background: var(--surface); border-radius: var(--radius); overflow:hidden;}
-  thead th{
-    text-align:left; font-size:11px; text-transform:uppercase; letter-spacing:0.05em;
-    color: var(--ink-soft); border-bottom: 2px solid var(--ink); padding: 8px 10px;
-  }
-  tbody td{
-    padding: 10px; font-size:14px; border-bottom: 1px solid var(--line);
-  }
+  thead th{ text-align:left; font-size:11px; text-transform:uppercase; letter-spacing:0.05em; color: var(--ink-soft); border-bottom: 2px solid var(--ink); padding: 8px 10px; }
+  tbody td{ padding: 10px; font-size:14px; border-bottom: 1px solid var(--line); }
   tbody tr:hover{ background: #f3efe6; }
   .num-cell{ font-family:'IBM Plex Mono', monospace; }
   .lucro-cell{ color: var(--sage); font-weight:600; }
-  .del-btn{
-    background:none; border:none; color: var(--ink-soft); cursor:pointer; font-size:20px;
-    padding: 6px 10px; line-height:1;
-  }
+  .del-btn{ background:none; border:none; color: var(--ink-soft); cursor:pointer; font-size:20px; padding: 6px 10px; line-height:1; }
   .del-btn:hover{ color: var(--thread); }
+  .client-name{ font-size:12px; color: var(--ink-soft); font-weight:400; }
+  .badge{ font-size:11px; font-weight:600; padding:2px 8px; border-radius:10px; display:inline-block; }
+  .badge.aberto{ background:#F5E7E2; color: var(--thread-dark); }
+  .badge.pago{ background: var(--sage-bg); color: var(--sage); }
+  .pay-btn{ background: var(--sage); color:#fff; border:none; border-radius: var(--radius); padding: 5px 10px; font-size:12px; font-weight:600; cursor:pointer; white-space:nowrap; }
+  .pay-btn:hover{ opacity:0.85; }
 
-  /* MOBILE: history becomes stacked cards instead of a cramped table */
+  .empty{ text-align:center; padding: 40px 20px; color: var(--ink-soft); font-size:14px; background: var(--surface); border-radius: var(--radius); border: 1px dashed var(--line); }
+  .loading{ text-align:center; padding:30px; color:var(--ink-soft); font-size:13px; }
+  .err-box{ background:#F5E7E2; border:1px solid #e6cec4; color: var(--thread-dark); padding:14px 16px; border-radius: var(--radius); margin-bottom:20px; font-size:13px; display:none; }
+
   @media (max-width: 640px){
     thead{ display:none; }
     table, tbody, tr, td{ display:block; width:100%; }
-    tbody tr{
-      background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
-      margin-bottom: 10px; padding: 12px 14px; position: relative;
-    }
+    tbody tr{ background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); margin-bottom: 10px; padding: 12px 14px; position: relative; }
     tbody td{ border-bottom:none; padding: 3px 0; display:flex; justify-content:space-between; align-items:center; }
-    tbody td::before{
-      content: attr(data-label); font-size:11px; color: var(--ink-soft);
-      text-transform:uppercase; letter-spacing:0.04em; font-weight:600;
-    }
+    tbody td::before{ content: attr(data-label); font-size:11px; color: var(--ink-soft); text-transform:uppercase; letter-spacing:0.04em; font-weight:600; }
     tbody td.item-cell{ display:block; padding-bottom:8px; margin-bottom:6px; border-bottom:1px dashed var(--line); }
     tbody td.item-cell::before{ content:none; }
     tbody td.item-cell{ font-weight:600; font-size:15px; }
     tbody td.del-cell{ position:absolute; top:8px; right:8px; padding:0; }
     tbody td.del-cell::before{ content:none; }
   }
-  .empty{
-    text-align:center; padding: 40px 20px; color: var(--ink-soft); font-size:14px;
-    background: var(--surface); border-radius: var(--radius); border: 1px dashed var(--line);
-  }
-  .cat-pill{
-    font-size:11px; background: #eee3d3; color:#7a6a4f; padding:2px 7px; border-radius: 10px;
-  }
-  .loading{ text-align:center; padding:30px; color:var(--ink-soft); font-size:13px; }
 </style>
 </head>
 <body>
@@ -200,217 +162,377 @@
   <header>
     <div>
       <h1>Controle de <span>Vendas</span></h1>
-      <div class="sub">Registre o que saiu do estoque e acompanhe o lucro em tempo real</div>
+      <div class="sub"><span class="sync-dot"></span> Sincronizado em nuvem — funciona em qualquer celular</div>
     </div>
     <button class="reset-btn" id="resetBtn">Limpar tudo</button>
   </header>
+
+  <div id="errBox" class="err-box">
+    Não foi possível conectar ao banco de dados. Verifique se as regras do Firestore permitem leitura/escrita.
+  </div>
 
   <div id="loadingMsg" class="loading">Carregando seus dados...</div>
 
   <div id="app" style="display:none;">
 
     <div class="summary">
-      <div class="card">
-        <div class="label">Peças vendidas</div>
-        <div class="value" id="sumQtd">0</div>
-      </div>
-      <div class="card">
-        <div class="label">Faturamento</div>
-        <div class="value" id="sumFat">R$ 0,00</div>
-      </div>
-      <div class="card lucro">
-        <div class="label">Lucro total</div>
-        <div class="value" id="sumLucro">R$ 0,00</div>
-      </div>
-      <div class="card">
-        <div class="label">Ticket médio</div>
-        <div class="value" id="sumTicket">R$ 0,00</div>
-      </div>
+      <div class="card"><div class="label">Peças vendidas</div><div class="value" id="sumQtd">0</div></div>
+      <div class="card"><div class="label">Faturamento</div><div class="value" id="sumFat">R$ 0,00</div></div>
+      <div class="card lucro"><div class="label">Lucro total</div><div class="value" id="sumLucro">R$ 0,00</div></div>
+      <div class="card"><div class="label">Ticket médio</div><div class="value" id="sumTicket">R$ 0,00</div></div>
+      <div class="card fiado"><div class="label">Fiado em aberto</div><div class="value" id="sumFiado">R$ 0,00</div></div>
     </div>
 
-    <div class="tag-panel">
-      <div class="tag-card">
-        <div class="punch"></div>
-        <div class="tag-title">Registrar venda</div>
-        <div class="form-grid">
-          <div class="field wide">
-            <label>Peça</label>
-            <input type="text" id="fItem" placeholder="Ex: Vestido floral">
-          </div>
-          <div class="field">
-            <label>Categoria</label>
-            <input type="text" id="fCat" placeholder="Ex: Vestidos">
-          </div>
-          <div class="field">
-            <label>Data</label>
-            <input type="date" id="fData">
-          </div>
-          <div class="field">
-            <label>Qtd</label>
-            <input type="number" id="fQtd" min="1" value="1">
-          </div>
-          <div class="field">
-            <label>Custo (un.)</label>
-            <input type="number" id="fCusto" min="0" step="0.01" placeholder="0,00">
-          </div>
-          <div class="field">
-            <label>Venda (un.)</label>
-            <input type="number" id="fPreco" min="0" step="0.01" placeholder="0,00">
-          </div>
-          <div style="flex:1"></div>
+    <div class="tabs">
+      <button class="tab-btn active" data-tab="estoque">📦 Estoque</button>
+      <button class="tab-btn" data-tab="vender">💰 Vender</button>
+      <button class="tab-btn" data-tab="historico">📋 Histórico</button>
+    </div>
 
-          <div class="lucro-preview">
-            <span class="txt">Lucro dessa venda</span>
-            <span class="num" id="previewLucro">R$ 0,00</span>
+    <div class="tab-panel active" id="panel-estoque">
+      <div class="tag-panel">
+        <div class="tag-card">
+          <div class="punch"></div>
+          <div class="tag-title">Cadastrar item</div>
+          <div class="form-grid">
+            <div class="field wide">
+              <label>Peça</label>
+              <input type="text" id="iNome" placeholder="Ex: Vestido floral">
+            </div>
+            <div class="field">
+              <label>Categoria</label>
+              <input type="text" id="iCat" placeholder="Ex: Vestidos">
+            </div>
+            <div class="field">
+              <label>Custo (un.)</label>
+              <input type="number" id="iCusto" min="0" step="0.01" placeholder="0,00">
+            </div>
+            <div class="field">
+              <label>Venda (un.)</label>
+              <input type="number" id="iPreco" min="0" step="0.01" placeholder="0,00">
+            </div>
+            <div class="field">
+              <label>Quantidade em estoque</label>
+              <input type="number" id="iQtd" min="1" value="1">
+            </div>
+            <button class="add-btn" id="addItemBtn" style="grid-column: 1 / -1;">Adicionar ao estoque</button>
           </div>
-          <button class="add-btn" id="addBtn">Adicionar venda</button>
         </div>
       </div>
+
+      <h2 class="section-title">Itens no estoque</h2>
+      <div id="stockList"></div>
     </div>
 
-    <div class="history-head">
-      <h2>Histórico</h2>
-      <select class="filter" id="sortSelect">
-        <option value="recent">Mais recentes</option>
-        <option value="old">Mais antigas</option>
-        <option value="lucro">Maior lucro</option>
-      </select>
+    <div class="tab-panel" id="panel-vender">
+      <h2 class="section-title">Escolha o item vendido</h2>
+      <div id="sellList"></div>
     </div>
 
-    <div id="tableWrap"></div>
+    <div class="tab-panel" id="panel-historico">
+      <div class="history-head">
+        <h2 class="section-title" style="margin:0;">Histórico de vendas</h2>
+        <select class="filter" id="sortSelect">
+          <option value="recent">Mais recentes</option>
+          <option value="old">Mais antigas</option>
+          <option value="lucro">Maior lucro</option>
+          <option value="fiado">Somente fiado em aberto</option>
+        </select>
+      </div>
+      <div id="tableWrap"></div>
+    </div>
 
   </div>
 </div>
 
 <script>
-const STORAGE_KEY = 'vendas-roupas-lista';
+const firebaseConfig = {
+  apiKey: "AIzaSyBysWzrKVYzI0g4A8hV45AYwfWM4n3v8Sw",
+  authDomain: "controle-vendas-2b15b.firebaseapp.com",
+  projectId: "controle-vendas-2b15b",
+  storageBucket: "controle-vendas-2b15b.firebasestorage.app",
+  messagingSenderId: "861587523191",
+  appId: "1:861587523191:web:66b5404b790b4a18906872",
+  measurementId: "G-1WN7V54XH9"
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+const itemsCol = db.collection('items');
+const salesCol = db.collection('sales');
+
+let items = [];
 let sales = [];
+let selectedSellId = null;
+let loadedItems = false, loadedSales = false;
 
-function fmtMoney(n){
-  return 'R$ ' + n.toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2});
-}
-function fmtDate(iso){
-  if(!iso) return '-';
-  const [y,m,d] = iso.split('-');
-  return `${d}/${m}/${y}`;
-}
-function todayISO(){
-  return new Date().toISOString().split('T')[0];
-}
+function fmtMoney(n){ return 'R$ ' + n.toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2}); }
+function fmtDate(iso){ if(!iso) return '-'; const [y,m,d] = iso.split('-'); return `${d}/${m}/${y}`; }
+function todayISO(){ return new Date().toISOString().split('T')[0]; }
+function computeLucro(sale){ return (sale.preco - sale.custo) * sale.qtd; }
 
-async function loadSales(){
-  try{
-    const res = await window.storage.get(STORAGE_KEY, false);
-    sales = res ? JSON.parse(res.value) : [];
-  }catch(e){
-    sales = [];
+function checkLoaded(){
+  if(loadedItems && loadedSales){
+    document.getElementById('loadingMsg').style.display = 'none';
+    document.getElementById('app').style.display = 'block';
   }
+}
+function showError(){
+  document.getElementById('errBox').style.display = 'block';
   document.getElementById('loadingMsg').style.display = 'none';
-  document.getElementById('app').style.display = 'block';
-  render();
 }
 
-async function saveSales(){
+itemsCol.onSnapshot(snapshot=>{
+  items = snapshot.docs.map(d=>({ id: d.id, ...d.data() }));
+  loadedItems = true;
+  checkLoaded();
+  renderStock(); renderSell(); renderSummary();
+}, err=>{ console.error(err); showError(); });
+
+salesCol.onSnapshot(snapshot=>{
+  sales = snapshot.docs.map(d=>({ id: d.id, ...d.data() }));
+  loadedSales = true;
+  checkLoaded();
+  renderSummary(); renderHistory();
+}, err=>{ console.error(err); showError(); });
+
+document.querySelectorAll('.tab-btn').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+    document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('panel-' + btn.dataset.tab).classList.add('active');
+    if(btn.dataset.tab === 'vender'){ selectedSellId = null; renderSell(); }
+  });
+});
+
+document.getElementById('addItemBtn').addEventListener('click', async ()=>{
+  const nome = document.getElementById('iNome').value.trim();
+  const cat = document.getElementById('iCat').value.trim();
+  const custo = parseFloat(document.getElementById('iCusto').value);
+  const preco = parseFloat(document.getElementById('iPreco').value);
+  const qtd = parseInt(document.getElementById('iQtd').value);
+
+  if(!nome){ alert('Digite o nome da peça.'); return; }
+  if(isNaN(custo) || isNaN(preco)){ alert('Informe os valores de custo e venda.'); return; }
+  if(!qtd || qtd <= 0){ alert('Informe uma quantidade válida.'); return; }
+
+  const btn = document.getElementById('addItemBtn');
+  btn.disabled = true; btn.textContent = 'Adicionando...';
   try{
-    await window.storage.set(STORAGE_KEY, JSON.stringify(sales), false);
+    await itemsCol.add({ nome, cat, custo, preco, estoque: qtd });
+    document.getElementById('iNome').value = '';
+    document.getElementById('iCat').value = '';
+    document.getElementById('iCusto').value = '';
+    document.getElementById('iPreco').value = '';
+    document.getElementById('iQtd').value = 1;
   }catch(e){
-    console.error('Erro ao salvar', e);
+    console.error(e);
+    alert('Erro ao salvar. Verifique sua conexão e as regras do Firestore.');
+  }
+  btn.disabled = false; btn.textContent = 'Adicionar ao estoque';
+});
+
+async function deleteItem(id){
+  if(!confirm('Remover este item do estoque?')) return;
+  try{ await itemsCol.doc(id).delete(); }catch(e){ console.error(e); alert('Erro ao excluir.'); }
+}
+
+function renderStock(){
+  const wrap = document.getElementById('stockList');
+  if(items.length === 0){
+    wrap.innerHTML = '<div class="empty">Nenhum item cadastrado ainda. Preencha a etiqueta acima para começar.</div>';
+    return;
+  }
+  wrap.innerHTML = items.map(i => `
+    <div class="stock-card">
+      <div>
+        <div class="stock-name">${i.nome} ${i.cat ? `<span class="cat-pill">${i.cat}</span>` : ''}</div>
+        <div class="stock-meta">Custo ${fmtMoney(i.custo)} · Venda ${fmtMoney(i.preco)}</div>
+      </div>
+      <div class="stock-actions">
+        <span class="qty-badge ${i.estoque <= 0 ? 'zero' : ''}">${i.estoque} un.</span>
+        <button class="del-btn" onclick="deleteItem('${i.id}')" title="Excluir">✕</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+function selectItemForSale(id){
+  selectedSellId = (selectedSellId === id) ? null : id;
+  renderSell();
+}
+
+function renderSell(){
+  const wrap = document.getElementById('sellList');
+  if(items.length === 0){
+    wrap.innerHTML = '<div class="empty">Cadastre itens na aba Estoque antes de registrar uma venda.</div>';
+    return;
+  }
+  wrap.innerHTML = items.map(i => {
+    const esgotado = i.estoque <= 0;
+    const selected = selectedSellId === i.id;
+    return `
+    <div class="sell-card ${selected ? 'selected' : ''} ${esgotado ? 'disabled' : ''}" ${esgotado ? '' : `onclick="${selected ? '' : `selectItemForSale('${i.id}')`}"`}>
+      <div class="sell-top">
+        <div>
+          <div class="stock-name">${i.nome} ${i.cat ? `<span class="cat-pill">${i.cat}</span>` : ''}</div>
+          <div class="stock-meta">${esgotado ? 'Esgotado' : `${i.estoque} disponível`} · ${fmtMoney(i.preco)} cada</div>
+        </div>
+        <span class="qty-badge ${esgotado ? 'zero' : ''}">${i.estoque} un.</span>
+      </div>
+      ${selected ? `
+      <div class="sell-form">
+        <div class="field">
+          <label>Quantidade vendida</label>
+          <input type="number" id="sQtd-${i.id}" min="1" max="${i.estoque}" value="1">
+        </div>
+        <div class="field">
+          <label>Data</label>
+          <input type="date" id="sData-${i.id}" value="${todayISO()}">
+        </div>
+        <div class="field wide">
+          <label>Cliente</label>
+          <input type="text" id="sCliente-${i.id}" placeholder="Ex: Maria Silva">
+        </div>
+        <div class="checkbox-field wide">
+          <input type="checkbox" id="sFiado-${i.id}" onchange="document.getElementById('parcelasWrap-${i.id}').style.display = this.checked ? 'flex' : 'none'">
+          <label for="sFiado-${i.id}">Venda fiado (cliente vai pagar depois)</label>
+        </div>
+        <div class="field" id="parcelasWrap-${i.id}" style="display:none;">
+          <label>Em quantas vezes</label>
+          <input type="number" id="sParcelas-${i.id}" min="1" value="1">
+        </div>
+        <div class="sell-form-actions">
+          <button class="add-btn cancel" onclick="event.stopPropagation(); selectItemForSale('${i.id}')">Cancelar</button>
+          <button class="add-btn" id="confirmBtn-${i.id}" onclick="event.stopPropagation(); confirmarVenda('${i.id}')">Confirmar venda</button>
+        </div>
+      </div>
+      ` : ''}
+    </div>
+    `;
+  }).join('');
+}
+
+async function confirmarVenda(itemId){
+  const item = items.find(i => i.id === itemId);
+  if(!item) return;
+
+  const qtd = parseInt(document.getElementById(`sQtd-${itemId}`).value);
+  const data = document.getElementById(`sData-${itemId}`).value || todayISO();
+  const cliente = document.getElementById(`sCliente-${itemId}`).value.trim();
+  const fiado = document.getElementById(`sFiado-${itemId}`).checked;
+  const parcelas = fiado ? (parseInt(document.getElementById(`sParcelas-${itemId}`).value) || 1) : 1;
+
+  if(!qtd || qtd <= 0){ alert('Informe uma quantidade válida.'); return; }
+  if(qtd > item.estoque){ alert('Quantidade maior que o estoque disponível.'); return; }
+  if(fiado && !cliente){ alert('Para venda fiado, informe o nome do cliente.'); return; }
+
+  const btn = document.getElementById(`confirmBtn-${itemId}`);
+  if(btn){ btn.disabled = true; btn.textContent = 'Salvando...'; }
+
+  try{
+    await salesCol.add({
+      itemId: item.id,
+      item: item.nome, cat: item.cat || '', cliente, data, qtd,
+      custo: item.custo, preco: item.preco,
+      fiado, parcelas, parcelasPagas: 0, pago: !fiado
+    });
+    await itemsCol.doc(item.id).update({ estoque: item.estoque - qtd });
+    selectedSellId = null;
+  }catch(e){
+    console.error(e);
+    alert('Erro ao registrar a venda. Verifique sua conexão.');
+    if(btn){ btn.disabled = false; btn.textContent = 'Confirmar venda'; }
   }
 }
 
-function computeLucro(sale){
-  return (sale.preco - sale.custo) * sale.qtd;
-}
-
-function updatePreview(){
-  const qtd = parseFloat(document.getElementById('fQtd').value) || 0;
-  const custo = parseFloat(document.getElementById('fCusto').value) || 0;
-  const preco = parseFloat(document.getElementById('fPreco').value) || 0;
-  const lucro = (preco - custo) * qtd;
-  document.getElementById('previewLucro').textContent = fmtMoney(lucro);
-  document.getElementById('previewLucro').style.color = lucro < 0 ? '#A63A32' : '';
-}
-
-['fQtd','fCusto','fPreco'].forEach(id=>{
-  document.getElementById(id).addEventListener('input', updatePreview);
-});
-
-document.getElementById('addBtn').addEventListener('click', async ()=>{
-  const item = document.getElementById('fItem').value.trim();
-  const cat = document.getElementById('fCat').value.trim();
-  const data = document.getElementById('fData').value || todayISO();
-  const qtd = parseFloat(document.getElementById('fQtd').value);
-  const custo = parseFloat(document.getElementById('fCusto').value);
-  const preco = parseFloat(document.getElementById('fPreco').value);
-
-  if(!item){ alert('Digite o nome da peça.'); return; }
-  if(!qtd || qtd <= 0){ alert('Informe uma quantidade válida.'); return; }
-  if(isNaN(custo) || isNaN(preco)){ alert('Informe os valores de custo e venda.'); return; }
-
-  sales.push({
-    id: 'v' + Date.now(),
-    item, cat, data, qtd, custo, preco
-  });
-  await saveSales();
-
-  document.getElementById('fItem').value = '';
-  document.getElementById('fCat').value = '';
-  document.getElementById('fData').value = '';
-  document.getElementById('fQtd').value = 1;
-  document.getElementById('fCusto').value = '';
-  document.getElementById('fPreco').value = '';
-  updatePreview();
-
-  render();
-});
-
-document.getElementById('sortSelect').addEventListener('change', render);
+document.getElementById('sortSelect').addEventListener('change', renderHistory);
 
 document.getElementById('resetBtn').addEventListener('click', async ()=>{
-  if(confirm('Isso vai apagar todas as vendas registradas. Tem certeza?')){
-    sales = [];
-    await saveSales();
-    render();
-  }
+  if(!confirm('Isso vai apagar TODO o estoque e TODAS as vendas registradas, em todos os aparelhos. Tem certeza?')) return;
+  try{
+    const batch = db.batch();
+    const itemsSnap = await itemsCol.get();
+    const salesSnap = await salesCol.get();
+    itemsSnap.forEach(doc => batch.delete(doc.ref));
+    salesSnap.forEach(doc => batch.delete(doc.ref));
+    await batch.commit();
+  }catch(e){ console.error(e); alert('Erro ao limpar os dados.'); }
 });
 
 async function deleteSale(id){
-  sales = sales.filter(s => s.id !== id);
-  await saveSales();
-  render();
+  try{
+    const sale = sales.find(s => s.id === id);
+    if(sale && sale.itemId){
+      const item = items.find(i => i.id === sale.itemId);
+      if(item){ await itemsCol.doc(item.id).update({ estoque: item.estoque + sale.qtd }); }
+    }
+    await salesCol.doc(id).delete();
+  }catch(e){ console.error(e); alert('Erro ao excluir a venda.'); }
 }
 
-function render(){
+async function registrarPagamento(id){
+  try{
+    const sale = sales.find(s => s.id === id);
+    if(!sale) return;
+    const novasPagas = Math.min(sale.parcelas, (sale.parcelasPagas||0) + 1);
+    const pago = novasPagas >= sale.parcelas;
+    await salesCol.doc(id).update({ parcelasPagas: novasPagas, pago });
+  }catch(e){ console.error(e); alert('Erro ao registrar pagamento.'); }
+}
+
+function renderSummary(){
   const totalQtd = sales.reduce((a,s)=>a+s.qtd,0);
   const totalFat = sales.reduce((a,s)=>a+s.preco*s.qtd,0);
   const totalLucro = sales.reduce((a,s)=>a+computeLucro(s),0);
   const ticket = totalQtd > 0 ? totalFat/totalQtd : 0;
+  const totalFiadoAberto = sales.filter(s=>s.fiado && !s.pago).reduce((a,s)=>{
+    const total = s.preco*s.qtd;
+    const restante = total * ((s.parcelas - (s.parcelasPagas||0)) / s.parcelas);
+    return a + restante;
+  },0);
 
   document.getElementById('sumQtd').textContent = totalQtd;
   document.getElementById('sumFat').textContent = fmtMoney(totalFat);
   document.getElementById('sumLucro').textContent = fmtMoney(totalLucro);
   document.getElementById('sumTicket').textContent = fmtMoney(ticket);
+  document.getElementById('sumFiado').textContent = fmtMoney(totalFiadoAberto);
+}
 
+function renderHistory(){
   const sortVal = document.getElementById('sortSelect').value;
   let sorted = [...sales];
+  if(sortVal === 'fiado') sorted = sorted.filter(s => s.fiado && !s.pago);
   if(sortVal === 'recent') sorted.sort((a,b)=> (b.data||'').localeCompare(a.data||'') || b.id.localeCompare(a.id));
   if(sortVal === 'old') sorted.sort((a,b)=> (a.data||'').localeCompare(b.data||'') || a.id.localeCompare(b.id));
   if(sortVal === 'lucro') sorted.sort((a,b)=> computeLucro(b) - computeLucro(a));
+  if(sortVal === 'fiado') sorted.sort((a,b)=> (b.data||'').localeCompare(a.data||''));
 
   const wrap = document.getElementById('tableWrap');
   if(sorted.length === 0){
-    wrap.innerHTML = '<div class="empty">Nenhuma venda registrada ainda. Preencha a etiqueta acima para começar.</div>';
+    const msg = sortVal === 'fiado' ? 'Nenhum fiado em aberto no momento. 🎉' : 'Nenhuma venda registrada ainda.';
+    wrap.innerHTML = `<div class="empty">${msg}</div>`;
     return;
   }
 
   let rows = sorted.map(s => `
     <tr>
-      <td class="item-cell">${s.item}${s.cat ? ` <span class="cat-pill">${s.cat}</span>` : ''}</td>
+      <td class="item-cell">
+        ${s.item}${s.cat ? ` <span class="cat-pill">${s.cat}</span>` : ''}
+        ${s.cliente ? `<br><span class="client-name">Cliente: ${s.cliente}</span>` : ''}
+      </td>
       <td class="num-cell" data-label="Data">${fmtDate(s.data)}</td>
       <td class="num-cell" data-label="Qtd">${s.qtd}</td>
       <td class="num-cell" data-label="Custo un.">${fmtMoney(s.custo)}</td>
       <td class="num-cell" data-label="Venda un.">${fmtMoney(s.preco)}</td>
       <td class="num-cell lucro-cell" data-label="Lucro">${fmtMoney(computeLucro(s))}</td>
+      <td data-label="Status">
+        ${s.fiado
+          ? (s.pago
+              ? `<span class="badge pago">Pago</span>`
+              : `<span class="badge aberto">Fiado ${s.parcelas > 1 ? `(${s.parcelasPagas||0}/${s.parcelas}x)` : ''}</span> <button class="pay-btn" onclick="registrarPagamento('${s.id}')">${s.parcelas > 1 ? 'Registrar parcela' : 'Marcar pago'}</button>`)
+          : '-'}
+      </td>
       <td class="del-cell"><button class="del-btn" onclick="deleteSale('${s.id}')" title="Excluir">✕</button></td>
     </tr>
   `).join('');
@@ -418,23 +540,12 @@ function render(){
   wrap.innerHTML = `
     <table>
       <thead>
-        <tr>
-          <th>Peça</th>
-          <th>Data</th>
-          <th>Qtd</th>
-          <th>Custo un.</th>
-          <th>Venda un.</th>
-          <th>Lucro</th>
-          <th></th>
-        </tr>
+        <tr><th>Peça</th><th>Data</th><th>Qtd</th><th>Custo un.</th><th>Venda un.</th><th>Lucro</th><th>Status</th><th></th></tr>
       </thead>
       <tbody>${rows}</tbody>
     </table>
   `;
 }
-
-document.getElementById('fData').value = todayISO();
-loadSales();
 </script>
 </body>
 </html>
